@@ -25,7 +25,7 @@ export const Row = object({
   projectCode: data["Project Code"],
   task: data.Task,
   notes: data.Notes,
-  hours: data.Hours,
+  hours: Number(data.Hours),
   billable: data["Billable?"],
   invoiced: data["Invoiced?"],
   firstName: data["First Name"],
@@ -40,4 +40,4 @@ export const Row = object({
 
 export const Rows = array(Row);
 
-export type Row = z.infer<typeof Row>
+export type Row = z.infer<typeof Row>;

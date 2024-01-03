@@ -46,6 +46,14 @@ svg text {
   color: white !important;
 }
 
+.series-area {
+  z-index: 1;
+  background: white;
+  border-radius: 4;
+  transition: opacity 0.3s ease;
+  position: relative;
+}
+
 .legend {
   overflow: auto;
   grid-area: legend;

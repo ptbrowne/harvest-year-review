@@ -11,12 +11,7 @@ import useStore from "./store";
 import { Row } from "./domain";
 import { mkSimplexNoise } from "@spissvinkel/simplex-noise";
 import { color as d3Color } from "d3";
-import {
-  motion,
-  useTransform,
-  useMotionValue,
-  AnimatePresence,
-} from "framer-motion";
+import clsx from "clsx";
 import { Text } from "@visx/text";
 
 type Datum = { project: string; hours: number; date: Date };
@@ -49,25 +44,6 @@ const palette = [
 
 const getProject = (d: Row) => (d.project === "Team" ? d.task : d.project);
 
-const getDims = {
-  radial: {
-    width: () => {
-      return window.innerWidth - 40;
-    },
-    height: () => {
-      return window.innerHeight - 40;
-    },
-  },
-  linear: {
-    width: () => {
-      return window.innerWidth - 40;
-    },
-    height: () => {
-      return 500;
-    },
-  },
-};
-
 const GradientDef = ({ color }: { color: string }) => {
   // Generate unique ID for the gradient
   const gradientId = `gradient-${color}`;
@@ -96,7 +72,6 @@ const ScrollToDiv = ({
   ...props
 }: HTMLProps<HTMLDivElement> & { scrollTo: boolean }) => {
   const ref = useRef<HTMLDivElement>(null);
-  const { radial } = useStore();
 
   useEffect(() => {
     if (scrollTo && ref.current) {
@@ -108,29 +83,19 @@ const ScrollToDiv = ({
 
 const tau = Math.PI * 2;
 
-const MotionText = motion(Text);
-
-const StreamGraphChart = ({ data }: { data: Datum[] }) => {
-  const { radial, setRadial } = useStore();
-  const [{ width, height }, setDims] = useState(() => {
-    const dims = getDims[radial ? "radial" : "linear"];
-    return { width: dims.width(), height: dims.height() };
-  });
-  const handleResize = useCallback(() => {
-    const dims = getDims[radial ? "radial" : "linear"];
-    setDims({ width: dims.width(), height: dims.height() });
-  }, [radial]);
-
-  useEffect(() => {
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [handleResize]);
-
+const StreamGraphChart = ({
+  data,
+  width,
+  height,
+}: {
+  data: Row[];
+  width: number;
+  height: number;
+}) => {
   const marginTop = 10;
-  const marginRight = 10;
   const marginBottom = 30;
   const marginLeft = 40;
-  const [hovered, setHovered] = useState(null);
+  const [hovered, setHovered] = useState<string | null>(null);
 
   // Create a ref to hold the SVG container
   const chartRef = useRef(null);
@@ -177,13 +142,14 @@ const StreamGraphChart = ({ data }: { data: Datum[] }) => {
       .range([0, width - 40]);
 
     const donutHeight = height / 1.7;
+    const yExtent = d3.extent(series.flat(2));
+    if (yExtent[0] === undefined) {
+      throw new Error("Should not happen");
+    }
     const y = d3
       .scaleLinear()
-      .domain(d3.extent(series.flat(2)))
-      .rangeRound([
-        radial ? donutHeight * 0.5 : height - marginBottom - marginTop,
-        radial ? donutHeight : marginBottom,
-      ]);
+      .domain(yExtent)
+      .rangeRound([donutHeight * 0.5, donutHeight]);
 
     const color = d3
       .scaleOrdinal()
@@ -192,30 +158,22 @@ const StreamGraphChart = ({ data }: { data: Datum[] }) => {
 
     // Construct an area shape.
 
-    const area = radial
-      ? d3
-          .areaRadial<{ data: [number, number] } & [number, number]>()
-          .curve(d3.curveBasis)
-          .angle((d) => a(d.data[0]))
-          .innerRadius((d) => y(d[0]))
-          .outerRadius((d) => y(d[1]))
-      : d3
-          .area()
-          .curve(d3.curveBasis)
-          .x((d) => x(d.data[0]))
-          .y0((d) => y(d[0]))
-          .y1((d) => y(d[1]));
+    const area = d3
+      .areaRadial<{ data: [number, number] } & [number, number]>()
+      .curve(d3.curveBasis)
+      .angle((d) => a(d.data[0]))
+      .innerRadius((d) => y(d[0]))
+      .outerRadius((d) => y(d[1]));
 
-    const maxs = {};
+    const maxs: Record<string, Date> = {};
     let cur: undefined | { project: string; date: Date } = undefined;
-    for (let [date, projects] of sumByDayByProject.entries()) {
-      const projectsEntries = [...projects.entries()];
+    for (let [date, projects] of Array.from(sumByDayByProject.entries())) {
+      const projectsEntries = Array.from(projects.entries());
       const maxIndex = d3.maxIndex(projectsEntries.map((x) => x[1]));
       const maxProject = projectsEntries[maxIndex][0];
-      console.log(date, cur?.date);
       if (
         cur?.project !== maxProject &&
-        (!cur || date - cur?.date > 1000 * 60 * 60 * 24 * 7)
+        (!cur || +date - +cur.date > 1000 * 60 * 60 * 24 * 7)
       ) {
         cur = { project: maxProject, date };
         if (!maxs[maxProject]) {
@@ -235,7 +193,7 @@ const StreamGraphChart = ({ data }: { data: Datum[] }) => {
     };
 
     return { area, color, a, x, y, series, label, sumByProject };
-  }, [data, radial]);
+  }, [data]);
 
   const months = [
     "Jan",
@@ -251,7 +209,6 @@ const StreamGraphChart = ({ data }: { data: Datum[] }) => {
     "Nov",
     "Dec",
   ];
-  const formatDate = (d) => months[d.getMonth()];
 
   return (
     <>
@@ -263,48 +220,10 @@ const StreamGraphChart = ({ data }: { data: Datum[] }) => {
       </h1>
       <div
         style={{
-          display: "grid",
           gap: "1rem",
-          gridTemplateAreas: radial ? '"chart"' : '"chart" "legend"',
-          gridTemplateRows: radial ? undefined : "500px auto",
-          gridTemplateColumns: radial ? "100%" : undefined,
           height: "100%",
         }}
       >
-        {radial ? null : (
-          <div className="legend">
-            {color
-              .domain()
-              .sort()
-              .map((x) => {
-                return (
-                  <ScrollToDiv
-                    onMouseEnter={() => setHovered(x)}
-                    onMouseLeave={() => setHovered(null)}
-                    scrollTo={hovered === x && radial}
-                    style={{
-                      // transition: "opacity 0.1s ease",
-                      display: "flex",
-                      gap: "0.25rem",
-                      alignItems: "center",
-                      justifyContent: "flex-start",
-                      opacity: hovered ? (hovered === x ? 1 : 0.2) : 1,
-                    }}
-                  >
-                    <div
-                      style={{
-                        marginTop: 2,
-                        width: 10,
-                        height: 10,
-                        background: color(x),
-                      }}
-                    />
-                    <div>{x}</div>
-                  </ScrollToDiv>
-                );
-              })}
-          </div>
-        )}
         <svg
           viewBox={`0 0 ${width} ${height}`}
           width={width}
@@ -325,67 +244,6 @@ const StreamGraphChart = ({ data }: { data: Datum[] }) => {
               return <GradientDef color={p} />;
             })}
           </defs>
-          {/* Add the y-axis, remove the domain line, add grid lines, and a label */}
-          {radial ? (
-            false
-          ) : (
-            <g transform={`translate(${marginLeft},0)`}>
-              {/* y-axis */}
-              <g>
-                {y.ticks(height / 100).map((tick) => (
-                  <g
-                    key={tick}
-                    className="tick"
-                    transform={`translate(0,${y(tick)})`}
-                  >
-                    <line
-                      x2={width - marginLeft - marginRight}
-                      strokeOpacity={0.1}
-                    />
-                    <text
-                      x={-marginLeft}
-                      y={10}
-                      fill="currentColor"
-                      textAnchor="start"
-                    >
-                      {Math.abs(tick).toLocaleString("en-US")}
-                    </text>
-                  </g>
-                ))}
-              </g>
-
-              <text
-                x={-marginLeft}
-                y={12}
-                fill="currentColor"
-                textAnchor="start"
-              >
-                {"↑ Hours"}
-              </text>
-            </g>
-          )}
-
-          {radial ? null : (
-            <g transform={`translate(0,${height - marginBottom})`}>
-              {x.ticks(width / 120).map((tick) => (
-                <g
-                  key={tick}
-                  className="tick"
-                  transform={`translate(${x(tick)},-15)`}
-                >
-                  <line y2={marginBottom} />
-                  <text
-                    dy=".71em"
-                    y={marginBottom}
-                    style={{ textAnchor: "middle" }}
-                  >
-                    {formatDate(tick)}
-                  </text>
-                </g>
-              ))}
-            </g>
-          )}
-
           {hovered ? (
             <>
               <Text
@@ -416,41 +274,29 @@ const StreamGraphChart = ({ data }: { data: Datum[] }) => {
           ) : null}
 
           {/* Append a path for each series */}
-          <g
-            transform={
-              radial
-                ? `translate(${width / 2}, ${height / 1.6})`
-                : `translate(${marginLeft}, ${marginTop})`
-            }
-          >
+          <g transform={`translate(${width / 2}, ${height / 1.6})`}>
             {series.map((d) => {
-              const pathD = area(d);
+              const serieArea = area(d);
+              if (!serieArea) {
+                return null;
+              }
               return (
-                <motion.path
-                  title={d.key}
+                <path
                   key={d.key}
                   onMouseEnter={() => setHovered(d.key)}
                   onMouseLeave={() => setHovered(null)}
+                  className={"series-area"}
+                  d={serieArea}
                   style={{
-                    position: "relative",
-                    zIndex: 1,
-                    background: "white",
-                    borderRadius: 4,
-                    transition: "opacity 0.3s ease",
                     opacity: hovered ? (hovered === d.key ? 0.9 : 0.5) : 0.8,
                   }}
                   fill={`url(#gradient-${color(d.key)})`}
                   stroke="rgba(255,255,255,0.2)"
                   strokeWidth="2px"
-                  initial={{
-                    d: pathD,
-                  }}
-                  animate={{
-                    d: pathD,
-                  }}
                 />
               );
             })}
+
             {series.map((d) => {
               const l = label(d.key);
               if (l === null) {
