@@ -1,0 +1,53 @@
+.App {
+  font-family: 'Circular', cursive;
+  color: white;
+}
+
+h1 {
+   font-family: 'Circular', sans-serif;
+   font-weight: 700;
+}
+
+@font-face {
+  font-family: 'Circular';
+  src:  url('./assets/circular-pro-medium.woff2') format('woff2');
+}
+
+html {
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+body {
+  height: 100%;
+}
+
+svg {
+  mix-blend-mode: overlay;
+}
+
+.bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  pointer-events: none;
+  z-index: -1;
+}
+
+svg path {
+  opacity: 0.8 !important;
+}
+
+svg text {
+  opacity: 0.5;
+  color: white !important;
+}
+
+.legend {
+  overflow: auto;
+  grid-area: legend;
+  color: rgba(0, 0, 0, 0.5)
+}
