@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Accept, useDropzone } from "react-dropzone";
+import { useDropzone } from "react-dropzone";
 import { csvParse } from "d3";
-import { ObjectInspector } from "react-inspector";
 import { ZodSchema } from "zod";
+import superjson from "superjson";
 
 const Dropzone = <R,>({
   schema,
@@ -18,8 +18,17 @@ const Dropzone = <R,>({
 
     // Parse the content using the provided schema
     const parsedData = schema.parse(data);
+
+    localStorage.setItem("parsedData", superjson.stringify(parsedData));
     // Call the onChange callback with the parsed data
     onChange(parsedData);
+  }, []);
+
+  useEffect(() => {
+    const savedData = localStorage.getItem("parsedData");
+    if (savedData) {
+      onChange(superjson.parse(savedData));
+    }
   }, []);
 
   const onDrop = useCallback(
