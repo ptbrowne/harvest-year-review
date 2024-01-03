@@ -57,7 +57,7 @@ const Dropzone = <R,>({
         <p>
           {isDragActive
             ? "Drop the file here..."
-            : "Drag and drop a Harvest CSV export here, or click to select one"}
+            : "Drag and drop a Harvest CSV export here, or click to select one. You can download a report by going to Harvest > Reports > User you are interested in > Detailed report > Export > CSV"}
         </p>
       </div>
       {fileError && <p style={{ color: "red" }}>{fileError}</p>}
