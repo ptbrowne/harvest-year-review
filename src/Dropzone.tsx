@@ -3,7 +3,6 @@ import { Accept, useDropzone } from "react-dropzone";
 import { csvParse } from "d3";
 import { ObjectInspector } from "react-inspector";
 import { ZodSchema } from "zod";
-import csvDataUrl from "../../../Downloads/harvest_time_report_from2023-01-01to2023-12-31-patrick.csv?url";
 
 const Dropzone = <R,>({
   schema,
@@ -50,14 +49,6 @@ const Dropzone = <R,>({
     onDrop,
     accept: { "text/csv": [] },
   });
-
-  useEffect(() => {
-    const run = async () => {
-      const content = await (await fetch(csvDataUrl)).text();
-      onReadCSV(content);
-    };
-    run();
-  }, []);
 
   return (
     <div>
