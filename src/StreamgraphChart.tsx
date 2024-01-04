@@ -29,18 +29,18 @@ function roundToMonday(inputDate: Date): Date {
   return date;
 }
 
-const palette = [
-  "#19A3D1",
-  "#31DEF3",
-  "#3B48B2",
-  "#B24F67",
-  "#E54F82",
-  "#FB993D",
-  "#FD89B9",
-  "#FEE9A9",
-  "#3DFB94",
-  "#0F713C",
-].sort((x) => Math.random() - 0.5);
+const paletteSpecs = {
+  "#19A3D1": [],
+  "#31DEF3": [],
+  "#3B48B2": [],
+  "#B24F67": [],
+  "#E54F82": [],
+  "#FD89B9": [],
+  "#FB993D": ["Personal Vacation", "Company Vacation"],
+  // "#FEE9A9": [],
+  "#3DFB94": ["Management", "Coordination", "Hackdays", "Education"],
+};
+const palette = Object.keys(paletteSpecs);
 
 const getProject = (d: Row) => (d.project === "Team" ? d.task : d.project);
 
@@ -83,6 +83,37 @@ const ScrollToDiv = ({
 
 const tau = Math.PI * 2;
 
+const makeScaleOrdinal = (specs: Record<string, string[]>) => {
+  const known = new Map<string, string>();
+  let i = 0;
+  const range = Object.keys(specs);
+  for (let k of range) {
+    for (let j = 0; j < specs[k].length; j++) {
+      known.set(specs[k][j], k);
+    }
+  }
+
+  return {
+    set: (key: string, value: string) => {
+      known.set(key, value);
+    },
+    encode: (key: string) => {
+      const already = known.get(key);
+      if (already) {
+        return already;
+      } else {
+        while (specs[range[i]].length) {
+          i = (i + 1) % range.length;
+        }
+        const newValue = range[i];
+        i = (i + 1) % range.length;
+        known.set(key, newValue);
+        return newValue;
+      }
+    },
+  };
+};
+
 const StreamGraphChart = ({
   data,
   width,
@@ -92,15 +123,19 @@ const StreamGraphChart = ({
   width: number;
   height: number;
 }) => {
-  const marginTop = 10;
-  const marginBottom = 30;
-  const marginLeft = 40;
   const [hovered, setHovered] = useState<string | null>(null);
 
-  // Create a ref to hold the SVG container
-  const chartRef = useRef(null);
-
-  const { x, y, series, color, area, label, sumByProject } = useMemo(() => {
+  const {
+    series,
+    color,
+    area,
+    label,
+    sumByProject,
+    totalSum,
+    dateExtent,
+    totalProjects,
+    ticks,
+  } = useMemo(() => {
     const sortedData = [...data].sort((a, b) => +a.date - +b.date);
     const sumByDayByProject = d3.rollup(
       sortedData,
@@ -108,6 +143,17 @@ const StreamGraphChart = ({
       (d) => roundToMonday(d.date),
       (d) => getProject(d)
     );
+
+    const totalProjects = d3.sum(
+      d3
+        .rollup(
+          sortedData,
+          (v) => 1,
+          (d) => getProject(d)
+        )
+        .values()
+    );
+    const totalSum = d3.sum(sortedData.map((x) => x.hours));
 
     const sumByProject = d3.rollup(
       sortedData,
@@ -146,15 +192,15 @@ const StreamGraphChart = ({
     if (yExtent[0] === undefined) {
       throw new Error("Should not happen");
     }
+
+    const donutThickness = donutHeight * 0.5;
     const y = d3
       .scaleLinear()
       .domain(yExtent)
-      .rangeRound([donutHeight * 0.5, donutHeight]);
+      .rangeRound([donutHeight - donutThickness, donutHeight]);
 
-    const color = d3
-      .scaleOrdinal()
-      .domain(series.map((d) => d.key))
-      .range(palette);
+    const colorScale = makeScaleOrdinal(paletteSpecs);
+    const color = colorScale.encode;
 
     // Construct an area shape.
 
@@ -180,7 +226,6 @@ const StreamGraphChart = ({
           maxs[maxProject] = date;
         }
       }
-      // const x = d3.maxIndex(projects);
     }
 
     const label = (key: string) => {
@@ -192,23 +237,45 @@ const StreamGraphChart = ({
       return [...d3.pointRadial(angle, radius), angle];
     };
 
-    return { area, color, a, x, y, series, label, sumByProject };
-  }, [data]);
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const ticks = Array.from({ length: 12 })
+      .fill(null)
+      .map((x, i) => {
+        const angle = a(new Date(dateExtent[0].getFullYear(), i, 15));
+        return {
+          xy: d3.pointRadial(angle, donutThickness - 30),
+          label: months[i],
+        };
+      });
 
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
+    return {
+      area,
+      color,
+      a,
+      x,
+      y,
+      series,
+      label,
+      sumByProject,
+      totalProjects,
+      totalSum,
+      dateExtent,
+      ticks,
+    };
+  }, [data]);
 
   return (
     <>
@@ -263,7 +330,7 @@ const StreamGraphChart = ({
                 verticalAnchor="middle"
                 fill="white"
                 style={{ opacity: 1 }}
-                width={width * 0.1}
+                width={width * 0.08}
                 x={width / 2}
                 y={height / 2}
                 fontSize={"40px"}
@@ -271,7 +338,45 @@ const StreamGraphChart = ({
                 {hovered}
               </Text>
             </>
-          ) : null}
+          ) : (
+            <>
+              <Text
+                textAnchor="middle"
+                verticalAnchor="middle"
+                fontSize={"24px"}
+                fill="white"
+                style={{ opacity: 1 }}
+                x={width / 2}
+                y={height / 2 + 100}
+              >
+                {`${totalSum.toFixed(0)} hours`}
+              </Text>
+              <Text
+                textAnchor="middle"
+                verticalAnchor="middle"
+                fontSize={"24px"}
+                fill="white"
+                style={{ opacity: 1 }}
+                x={width / 2}
+                y={height / 2 + 140}
+              >
+                {`${totalProjects} projects`}
+              </Text>
+              <Text
+                key={hovered}
+                textAnchor="middle"
+                verticalAnchor="middle"
+                fill="white"
+                style={{ opacity: 1 }}
+                width={width * 0.1}
+                x={width / 2}
+                y={height / 2}
+                fontSize={"70px"}
+              >
+                {dateExtent[0].getFullYear()}
+              </Text>
+            </>
+          )}
 
           {/* Append a path for each series */}
           <g transform={`translate(${width / 2}, ${height / 1.6})`}>
@@ -291,9 +396,25 @@ const StreamGraphChart = ({
                     opacity: hovered ? (hovered === d.key ? 0.9 : 0.5) : 0.8,
                   }}
                   fill={`url(#gradient-${color(d.key)})`}
+                  fillOpacity={hovered ? (hovered === d.key ? 1 : 0.5) : 1}
                   stroke="rgba(255,255,255,0.2)"
                   strokeWidth="2px"
                 />
+              );
+            })}
+            {ticks.map(({ xy, label }) => {
+              return (
+                <Text
+                  textAnchor={"middle"}
+                  dominantBaseline="middle"
+                  width={200}
+                  x={xy[0]}
+                  y={xy[1]}
+                  fontSize={"14px"}
+                  fill={"white"}
+                >
+                  {label}
+                </Text>
               );
             })}
 
@@ -311,7 +432,7 @@ const StreamGraphChart = ({
                   x={x}
                   y={y}
                   fontSize={"20px"}
-                  fill={hovered === d.key ? "white" : "white"}
+                  fill={"white"}
                   style={{ opacity: hovered === d.key ? 0.9 : undefined }}
                 >
                   {d.key}
