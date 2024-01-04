@@ -164,7 +164,19 @@ const StreamGraphChart = ({
     // Determine the series that need to be stacked.
     const series = d3
       .stack()
-      .order(d3.stackOrderAppearance)
+      .order((series) => {
+        const order = d3.stackOrderAscending(series);
+        const indexes = Object.fromEntries(series.map((s, i) => [s.key, i]));
+        console.log(indexes);
+        order.sort((a, b) => {
+          if (a === indexes["Coordination"]) {
+            return 1;
+          }
+          return 0;
+        });
+        console.log(order);
+        return order;
+      })
       .keys(d3.union(data.map((d) => getProject(d)))) // distinct series keys, in input order
       .value(([, D], key) => D.get(key) ?? 0)(
       // get value for each series key and stack

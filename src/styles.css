@@ -39,6 +39,7 @@ svg {
 
 svg path {
   opacity: 0.8 !important;
+  transition: opacity 0.5s ease;
 }
 
 svg text {
@@ -50,7 +51,7 @@ svg text {
   z-index: 1;
   background: white;
   border-radius: 4;
-  transition: opacity 0.3s ease;
+  transition: fill-opacity 0.5s ease;
   position: relative;
 }
 
