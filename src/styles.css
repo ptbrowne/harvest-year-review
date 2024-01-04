@@ -60,3 +60,47 @@ svg text {
   grid-area: legend;
   color: rgba(0, 0, 0, 0.5)
 }
+
+.month-tick {
+  animation: appear 1s ease;
+}
+
+.month-tick:nth-child(1) {
+  --delay: 1
+}
+.month-tick:nth-child(2) {
+  --delay: 2
+}
+.month-tick:nth-child(3) {
+  --delay: 3
+}
+.month-tick:nth-child(4) {
+  --delay: 4
+}
+.month-tick:nth-child(5) {
+  --delay: 5
+}
+.month-tick:nth-child(6) {
+  --delay: 6
+}
+.month-tick:nth-child(7) {
+  --delay: 7
+}
+.month-tick:nth-child(8) {
+  --delay: 8
+}
+.month-tick:nth-child(9) {
+  --delay: 9
+}
+.month-tick:nth-child(10) {
+  --delay: 10
+}
+.month-tick:nth-child(11) {
+  --delay: 11
+}
+.month-tick:nth-child(12) {
+  --delay: 12
+}
+.month-tick {
+  animation-delay: calc(var(--delay) * 1s)
+}

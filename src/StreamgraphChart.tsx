@@ -32,8 +32,7 @@ function roundToMonday(inputDate: Date): Date {
 const paletteSpecs = {
   "#19A3D1": [],
   "#31DEF3": [],
-  "#3B48B2": [],
-  "#B24F67": [],
+  "#C0A3FF": [],
   "#E54F82": [],
   "#FD89B9": [],
   "#FB993D": ["Personal Vacation", "Company Vacation"],
@@ -231,7 +230,7 @@ const StreamGraphChart = ({
       const maxProject = projectsEntries[maxIndex][0];
       if (
         cur?.project !== maxProject &&
-        (!cur || +date - +cur.date > 1000 * 60 * 60 * 24 * 7)
+        (!cur || +date - +cur.date > 1000 * 60 * 60 * 24 * 30)
       ) {
         cur = { project: maxProject, date };
         if (!maxs[maxProject]) {
@@ -414,21 +413,25 @@ const StreamGraphChart = ({
                 />
               );
             })}
-            {ticks.map(({ xy, label }) => {
-              return (
-                <Text
-                  textAnchor={"middle"}
-                  dominantBaseline="middle"
-                  width={200}
-                  x={xy[0]}
-                  y={xy[1]}
-                  fontSize={"14px"}
-                  fill={"white"}
-                >
-                  {label}
-                </Text>
-              );
-            })}
+            <g>
+              {ticks.map(({ xy, label }) => {
+                return (
+                  <g className="month-tick">
+                    <Text
+                      textAnchor={"middle"}
+                      dominantBaseline="middle"
+                      width={100}
+                      x={xy[0]}
+                      y={xy[1]}
+                      fontSize={"14px"}
+                      fill={"white"}
+                    >
+                      {label}
+                    </Text>
+                  </g>
+                );
+              })}
+            </g>
 
             {series.map((d) => {
               const l = label(d.key);
@@ -440,7 +443,7 @@ const StreamGraphChart = ({
                 <Text
                   textAnchor={x > width / 6 ? "start" : "end"}
                   dominantBaseline="middle"
-                  width={200}
+                  width={100}
                   x={x}
                   y={y}
                   fontSize={"20px"}
