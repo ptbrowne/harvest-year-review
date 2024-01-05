@@ -113,16 +113,11 @@ const makeScaleOrdinal = (specs: Record<string, string[]>) => {
   };
 };
 
-const StreamGraphChart = ({
-  data,
-  width,
-  height,
-}: {
-  data: Row[];
-  width: number;
-  height: number;
-}) => {
+const StreamGraphChart = ({ data }: { data: Row[] }) => {
   const [hovered, setHovered] = useState<string | null>(null);
+
+  const viewBoxWidth = 1800;
+  const viewBoxHeight = 1000;
 
   const {
     series,
@@ -133,9 +128,15 @@ const StreamGraphChart = ({
     totalSum,
     dateExtent,
     totalProjects,
+    projectToClient,
     ticks,
   } = useMemo(() => {
     const sortedData = [...data].sort((a, b) => +a.date - +b.date);
+    const projectToClient = d3.rollup(
+      sortedData,
+      (v) => v[0].client,
+      (d) => d.project
+    );
     const sumByDayByProject = d3.rollup(
       sortedData,
       (v) => d3.sum(v.map((x) => x.hours) ?? 0),
@@ -196,9 +197,9 @@ const StreamGraphChart = ({
     const x = d3
       .scaleUtc()
       .domain(dateExtent)
-      .range([0, width - 40]);
+      .range([0, viewBoxWidth - 40]);
 
-    const donutHeight = height / 1.7;
+    const donutHeight = viewBoxHeight / 1.7;
     const yExtent = d3.extent(series.flat(2));
     if (yExtent[0] === undefined) {
       throw new Error("Should not happen");
@@ -285,6 +286,7 @@ const StreamGraphChart = ({
       totalSum,
       dateExtent,
       ticks,
+      projectToClient,
     };
   }, [data]);
 
@@ -303,11 +305,11 @@ const StreamGraphChart = ({
         }}
       >
         <svg
-          viewBox={`0 0 ${width} ${height}`}
-          width={width}
-          height={height}
+          viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
           style={{
             gridArea: "chart",
+            aspectRatio: "16 / 9",
+            width: "100%",
             maxWidth: "100%",
             height: "auto",
             mixBlendMode: "hard-light",
@@ -327,26 +329,39 @@ const StreamGraphChart = ({
               <Text
                 textAnchor="middle"
                 verticalAnchor="middle"
-                fontSize={"24px"}
                 fill="white"
                 style={{ opacity: 1 }}
-                x={width / 2}
-                y={height / 2 + 100}
+                width={viewBoxWidth * 0.08}
+                x={viewBoxWidth / 2}
+                y={viewBoxHeight / 2}
+                fontSize={"40px"}
               >
-                {`${sumByProject.get(hovered)?.toFixed(0)} hours in total`}
+                {`${hovered}`}
               </Text>
               <Text
-                key={hovered}
                 textAnchor="middle"
                 verticalAnchor="middle"
                 fill="white"
+                fillOpacity={0.8}
                 style={{ opacity: 1 }}
-                width={width * 0.08}
-                x={width / 2}
-                y={height / 2}
-                fontSize={"40px"}
+                width={viewBoxWidth * 0.08}
+                x={viewBoxWidth / 2}
+                y={viewBoxHeight / 2 + 100}
+                fontSize={"24px"}
               >
-                {hovered}
+                {projectToClient.get(hovered)}
+              </Text>
+              <Text
+                textAnchor="middle"
+                verticalAnchor="middle"
+                fontSize={"24px"}
+                fill="white"
+                fillOpacity={0.8}
+                style={{ opacity: 1 }}
+                x={viewBoxWidth / 2}
+                y={viewBoxHeight / 2 + 160}
+              >
+                {`${sumByProject.get(hovered)?.toFixed(0)} hours`}
               </Text>
             </>
           ) : (
@@ -357,8 +372,8 @@ const StreamGraphChart = ({
                 fontSize={"24px"}
                 fill="white"
                 style={{ opacity: 1 }}
-                x={width / 2}
-                y={height / 2 + 100}
+                x={viewBoxWidth / 2}
+                y={viewBoxHeight / 2 + 100}
               >
                 {`${totalSum.toFixed(0)} hours`}
               </Text>
@@ -368,8 +383,8 @@ const StreamGraphChart = ({
                 fontSize={"24px"}
                 fill="white"
                 style={{ opacity: 1 }}
-                x={width / 2}
-                y={height / 2 + 140}
+                x={viewBoxWidth / 2}
+                y={viewBoxHeight / 2 + 140}
               >
                 {`${totalProjects} projects`}
               </Text>
@@ -379,9 +394,9 @@ const StreamGraphChart = ({
                 verticalAnchor="middle"
                 fill="white"
                 style={{ opacity: 1 }}
-                width={width * 0.1}
-                x={width / 2}
-                y={height / 2}
+                width={viewBoxWidth * 0.1}
+                x={viewBoxWidth / 2}
+                y={viewBoxHeight / 2}
                 fontSize={"70px"}
               >
                 {dateExtent[0].getFullYear()}
@@ -390,7 +405,9 @@ const StreamGraphChart = ({
           )}
 
           {/* Append a path for each series */}
-          <g transform={`translate(${width / 2}, ${height / 1.6})`}>
+          <g
+            transform={`translate(${viewBoxWidth / 2}, ${viewBoxHeight / 1.6})`}
+          >
             {series.map((d) => {
               const serieArea = area(d);
               if (!serieArea) {
@@ -441,7 +458,7 @@ const StreamGraphChart = ({
               const [x, y, angle] = l;
               return (
                 <Text
-                  textAnchor={x > width / 6 ? "start" : "end"}
+                  textAnchor={x > viewBoxWidth / 6 ? "start" : "end"}
                   dominantBaseline="middle"
                   width={100}
                   x={x}
