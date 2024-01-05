@@ -421,10 +421,10 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
                   className={"series-area"}
                   d={serieArea}
                   style={{
-                    opacity: hovered ? (hovered === d.key ? 0.9 : 0.5) : 0.8,
+                    opacity: hovered ? (hovered === d.key ? 0.9 : 0.1) : 0.8,
                   }}
                   fill={`url(#gradient-${color(d.key)})`}
-                  fillOpacity={hovered ? (hovered === d.key ? 1 : 0.5) : 1}
+                  fillOpacity={hovered ? (hovered === d.key ? 1 : 0.1) : 1}
                   stroke="rgba(255,255,255,0.2)"
                   strokeWidth="2px"
                 />
