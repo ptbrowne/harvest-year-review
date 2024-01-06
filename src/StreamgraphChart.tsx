@@ -13,6 +13,7 @@ import { mkSimplexNoise } from "@spissvinkel/simplex-noise";
 import { color as d3Color } from "d3";
 import clsx from "clsx";
 import { Text } from "@visx/text";
+import dayjs from "dayjs";
 
 type Datum = { project: string; hours: number; date: Date };
 
@@ -183,7 +184,15 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
       sumByDayByProject
     ); // group by stack then series key
 
-    const dateExtent = d3.extent(data, (d) => d.date) as [Date, Date];
+    let dateExtent = d3.extent(data, (d) => d.date);
+    if (!(dateExtent[0] instanceof Date)) {
+      throw new Error("Invalid data, could not compute dateExtent");
+    }
+    dateExtent = [
+      dayjs(dateExtent[0]).startOf("year").toDate(),
+      dayjs(dateExtent[1]).endOf("year").toDate(),
+    ];
+    console.log(dateExtent);
 
     // Prepare the scales for positional and color encodings.
 
@@ -198,6 +207,8 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
       .scaleUtc()
       .domain(dateExtent)
       .range([0, viewBoxWidth - 40]);
+
+    console.log("dateExtent", dateExtent);
 
     const donutHeight = viewBoxHeight / 1.7;
     const yExtent = d3.extent(series.flat(2));
@@ -290,6 +301,8 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
     };
   }, [data]);
 
+  const marginTop = 200;
+
   return (
     <>
       <ScrollToDiv scrollTo>
@@ -324,89 +337,85 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
               return <GradientDef color={p} />;
             })}
           </defs>
-          {hovered ? (
-            <>
-              <Text
-                textAnchor="middle"
-                verticalAnchor="middle"
-                fill="white"
-                style={{ opacity: 1 }}
-                width={viewBoxWidth * 0.08}
-                x={viewBoxWidth / 2}
-                y={viewBoxHeight / 2}
-                fontSize={"40px"}
-              >
-                {`${hovered}`}
-              </Text>
-              <Text
-                textAnchor="middle"
-                verticalAnchor="middle"
-                fill="white"
-                fillOpacity={0.8}
-                style={{ opacity: 1 }}
-                width={viewBoxWidth * 0.08}
-                x={viewBoxWidth / 2}
-                y={viewBoxHeight / 2 + 100}
-                fontSize={"24px"}
-              >
-                {projectToClient.get(hovered)}
-              </Text>
-              <Text
-                textAnchor="middle"
-                verticalAnchor="middle"
-                fontSize={"24px"}
-                fill="white"
-                fillOpacity={0.8}
-                style={{ opacity: 1 }}
-                x={viewBoxWidth / 2}
-                y={viewBoxHeight / 2 + 160}
-              >
-                {`${sumByProject.get(hovered)?.toFixed(0)} hours`}
-              </Text>
-            </>
-          ) : (
-            <>
-              <Text
-                textAnchor="middle"
-                verticalAnchor="middle"
-                fontSize={"24px"}
-                fill="white"
-                style={{ opacity: 1 }}
-                x={viewBoxWidth / 2}
-                y={viewBoxHeight / 2 + 100}
-              >
-                {`${totalSum.toFixed(0)} hours`}
-              </Text>
-              <Text
-                textAnchor="middle"
-                verticalAnchor="middle"
-                fontSize={"24px"}
-                fill="white"
-                style={{ opacity: 1 }}
-                x={viewBoxWidth / 2}
-                y={viewBoxHeight / 2 + 140}
-              >
-                {`${totalProjects} projects`}
-              </Text>
-              <Text
-                key={hovered}
-                textAnchor="middle"
-                verticalAnchor="middle"
-                fill="white"
-                style={{ opacity: 1 }}
-                width={viewBoxWidth * 0.1}
-                x={viewBoxWidth / 2}
-                y={viewBoxHeight / 2}
-                fontSize={"70px"}
-              >
-                {dateExtent[0].getFullYear()}
-              </Text>
-            </>
-          )}
-
-          {/* Append a path for each series */}
           <g
-            transform={`translate(${viewBoxWidth / 2}, ${viewBoxHeight / 1.6})`}
+            transform={`translate(${viewBoxWidth / 2}, ${
+              viewBoxHeight / 2 + marginTop
+            })`}
+          >
+            {hovered ? (
+              <>
+                <Text
+                  textAnchor="middle"
+                  verticalAnchor="middle"
+                  fill="white"
+                  width={viewBoxWidth * 0.08}
+                  y={-100}
+                  fontSize={"40px"}
+                >
+                  {`${hovered}`}
+                </Text>
+                <Text
+                  textAnchor="middle"
+                  verticalAnchor="middle"
+                  fill="white"
+                  fillOpacity={0.8}
+                  width={viewBoxWidth * 0.08}
+                  y={0}
+                  fontSize={"24px"}
+                >
+                  {projectToClient.get(hovered)}
+                </Text>
+                <Text
+                  textAnchor="middle"
+                  verticalAnchor="middle"
+                  fontSize={"24px"}
+                  fill="white"
+                  fillOpacity={0.8}
+                  y={60}
+                >
+                  {`${sumByProject.get(hovered)?.toFixed(0)} hours`}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text
+                  key={hovered}
+                  textAnchor="middle"
+                  verticalAnchor="middle"
+                  fill="white"
+                  width={viewBoxWidth * 0.1}
+                  y={-100}
+                  fontSize={"70px"}
+                >
+                  {dateExtent[0].getFullYear()}
+                </Text>
+                <Text
+                  textAnchor="middle"
+                  verticalAnchor="middle"
+                  fontSize={"24px"}
+                  fill="white"
+                  y={0}
+                >
+                  {`${totalProjects} projects`}
+                </Text>
+                <Text
+                  textAnchor="middle"
+                  verticalAnchor="middle"
+                  fontSize={"24px"}
+                  fill="white"
+                  y={60}
+                >
+                  {`${totalSum.toFixed(0)} hours`}
+                </Text>
+              </>
+            )}
+          </g>
+
+          {/* Paths */}
+          <g
+            transform={`translate(${viewBoxWidth / 2}, ${
+              viewBoxHeight / 2 + marginTop
+            })`}
           >
             {series.map((d) => {
               const serieArea = area(d);
@@ -430,6 +439,8 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
                 />
               );
             })}
+
+            {/* Month ticks */}
             <g>
               {ticks.map(({ xy, label }) => {
                 return (
@@ -456,9 +467,17 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
                 return null;
               }
               const [x, y, angle] = l;
+              const viewBoxX = x + viewBoxWidth / 2;
               return (
                 <Text
-                  textAnchor={x > viewBoxWidth / 6 ? "start" : "end"}
+                  textAnchor={
+                    viewBoxX < viewBoxWidth / 3
+                      ? "end"
+                      : viewBoxX < (viewBoxWidth / 3) * 2
+                      ? "middle"
+                      : "start"
+                  }
+                  verticalAnchor="end"
                   dominantBaseline="middle"
                   width={100}
                   x={x}
@@ -477,26 +496,5 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
     </>
   );
 };
-
-const textAnchorSpecs = [
-  [[0, (tau * 1) / 3], "start"],
-  [[(tau * 1) / 3, (tau * 2) / 3], "middle"],
-  [[(tau * 2) / 3, (tau * 4) / 3], "end"],
-  [[(tau * 4) / 3, tau], "start"],
-] satisfies [[number, number], string][];
-
-const intervalMatch = <T,>(specs: [[number, number], T][]) => {
-  return (n: number): T | undefined => {
-    for (let i = 0; i < specs.length; i++) {
-      const [[min, max], ret] = specs[i];
-      if (n >= min && n < max) {
-        return ret;
-      }
-    }
-    return undefined;
-  };
-};
-
-const angleToTextAnchor = intervalMatch(textAnchorSpecs);
 
 export default StreamGraphChart;

@@ -10,6 +10,7 @@ specifiers:
   '@typescript-eslint/parser': ^6.9.1
   '@visx/text': ^3.3.0
   d3: 7.8.5
+  dayjs: ^1.11.10
   eslint: ^8.52.0
   eslint-plugin-react: ^7.33.2
   eslint-plugin-react-hooks: ^4.6.0
@@ -33,6 +34,7 @@ dependencies:
   '@types/d3': 7.4.3
   '@visx/text': 3.3.0_react@18.2.0
   d3: 7.8.5
+  dayjs: 1.11.10
   flubber: 0.4.2
   framer-motion: 10.17.0_biqbaboplfbrettd7655fr4n2y
   loader-utils: 3.2.1
@@ -1344,6 +1346,10 @@ packages:
       d3-timer: 3.0.1
       d3-transition: 3.0.1_d3-selection@3.0.0
       d3-zoom: 3.0.0
+    dev: false
+
+  /dayjs/1.11.10:
+    resolution: {integrity: sha512-vjAczensTgRcqDERK0SR2XMwsF/tSvnvlv6VcF2GIhg6Sx4yOIt/irsr1RDJsKiIyBzJDpCoXiWWq28MqH2cnQ==}
     dev: false
 
   /debug/4.3.4:
