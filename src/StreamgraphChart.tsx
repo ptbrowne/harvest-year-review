@@ -14,6 +14,7 @@ import { color as d3Color } from "d3";
 import clsx from "clsx";
 import { Text } from "@visx/text";
 import dayjs from "dayjs";
+import useMediaQuery from "./useMediaQuery";
 
 type Datum = { project: string; hours: number; date: Date };
 
@@ -117,8 +118,33 @@ const makeScaleOrdinal = (specs: Record<string, string[]>) => {
 const StreamGraphChart = ({ data }: { data: Row[] }) => {
   const [hovered, setHovered] = useState<string | null>(null);
 
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
   const viewBoxWidth = 1800;
   const viewBoxHeight = 1000;
+
+  const margins = {
+    top: 200,
+    innerTicks: 30,
+  };
+
+  const fontSizes = {
+    ticks: 20,
+    h1: 70,
+    h2: 40,
+    h3: 24,
+    body1: 20,
+    body2: 14,
+  };
+
+  if (isMobile) {
+    for (let k_ of Object.keys(fontSizes)) {
+      const k = k_ as keyof typeof fontSizes;
+      fontSizes[k] = fontSizes[k] * 1.8;
+    }
+    margins.top = margins.top * 1.2;
+    margins.innerTicks = margins.innerTicks * 1.4;
+  }
 
   const {
     series,
@@ -208,8 +234,6 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
       .domain(dateExtent)
       .range([0, viewBoxWidth - 40]);
 
-    console.log("dateExtent", dateExtent);
-
     const donutHeight = viewBoxHeight / 1.7;
     const yExtent = d3.extent(series.flat(2));
     if (yExtent[0] === undefined) {
@@ -279,7 +303,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
       .map((x, i) => {
         const angle = a(new Date(dateExtent[0].getFullYear(), i, 15));
         return {
-          xy: d3.pointRadial(angle, donutThickness - 30),
+          xy: d3.pointRadial(angle, donutThickness - margins.innerTicks),
           label: months[i],
         };
       });
@@ -300,8 +324,6 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
       projectToClient,
     };
   }, [data]);
-
-  const marginTop = 200;
 
   return (
     <>
@@ -339,7 +361,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
           </defs>
           <g
             transform={`translate(${viewBoxWidth / 2}, ${
-              viewBoxHeight / 2 + marginTop
+              viewBoxHeight / 2 + margins.top
             })`}
           >
             {hovered ? (
@@ -350,7 +372,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
                   fill="white"
                   width={viewBoxWidth * 0.08}
                   y={-100}
-                  fontSize={"40px"}
+                  fontSize={fontSizes.h2}
                 >
                   {`${hovered}`}
                 </Text>
@@ -361,14 +383,14 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
                   fillOpacity={0.8}
                   width={viewBoxWidth * 0.08}
                   y={0}
-                  fontSize={"24px"}
+                  fontSize={fontSizes.h3}
                 >
                   {projectToClient.get(hovered)}
                 </Text>
                 <Text
                   textAnchor="middle"
                   verticalAnchor="middle"
-                  fontSize={"24px"}
+                  fontSize={fontSizes.h3}
                   fill="white"
                   fillOpacity={0.8}
                   y={60}
@@ -385,14 +407,14 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
                   fill="white"
                   width={viewBoxWidth * 0.1}
                   y={-100}
-                  fontSize={"70px"}
+                  fontSize={fontSizes.h1}
                 >
                   {dateExtent[0].getFullYear()}
                 </Text>
                 <Text
                   textAnchor="middle"
                   verticalAnchor="middle"
-                  fontSize={"24px"}
+                  fontSize={fontSizes.h3}
                   fill="white"
                   y={0}
                 >
@@ -401,7 +423,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
                 <Text
                   textAnchor="middle"
                   verticalAnchor="middle"
-                  fontSize={"24px"}
+                  fontSize={fontSizes.h3}
                   fill="white"
                   y={60}
                 >
@@ -414,7 +436,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
           {/* Paths */}
           <g
             transform={`translate(${viewBoxWidth / 2}, ${
-              viewBoxHeight / 2 + marginTop
+              viewBoxHeight / 2 + margins.top
             })`}
           >
             {series.map((d) => {
@@ -451,7 +473,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
                       width={100}
                       x={xy[0]}
                       y={xy[1]}
-                      fontSize={"14px"}
+                      fontSize={fontSizes.body2}
                       fill={"white"}
                     >
                       {label}
@@ -482,7 +504,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
                   width={100}
                   x={x}
                   y={y}
-                  fontSize={"20px"}
+                  fontSize={fontSizes.body1}
                   fill={"white"}
                   style={{ opacity: hovered === d.key ? 0.9 : undefined }}
                 >
