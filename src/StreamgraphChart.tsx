@@ -115,8 +115,39 @@ const makeScaleOrdinal = (specs: Record<string, string[]>) => {
   };
 };
 
+const months = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+const longMonths = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 const StreamGraphChart = ({ data }: { data: Row[] }) => {
   const [hovered, setHovered] = useState<string | null>(null);
+  const [hoveredMonth, setHoveredMonth] = useState<string | null>(null);
 
   const isMobile = useMediaQuery("(max-width: 768px)");
 
@@ -157,6 +188,8 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
     totalProjects,
     projectToClient,
     ticks,
+    projectsByMonth,
+    hoursByMonth,
   } = useMemo(() => {
     const sortedData = [...data].sort((a, b) => +a.date - +b.date);
     const projectToClient = d3.rollup(
@@ -186,6 +219,18 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
       sortedData,
       (v) => d3.sum(v.map((x) => x.hours) ?? 0),
       (d) => getProject(d)
+    );
+
+    const hoursByMonth = d3.rollup(
+      sortedData,
+      (v) => d3.sum(v.map((x) => x.hours) ?? 0),
+      (d) => `${d.date.toISOString().slice(0, 7)}`
+    );
+
+    const projectsByMonth = d3.rollup(
+      sortedData,
+      (v) => new Set(v.map((x) => x.project)).size,
+      (d) => `${d.date.toISOString().slice(0, 7)}`
     );
 
     // Determine the series that need to be stacked.
@@ -284,27 +329,15 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
       return [...d3.pointRadial(angle, radius), angle];
     };
 
-    const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
     const ticks = Array.from({ length: 12 })
       .fill(null)
       .map((x, i) => {
-        const angle = a(new Date(dateExtent[0].getFullYear(), i, 15));
+        const d = new Date(dateExtent[0].getFullYear(), i, 15);
+        const angle = a(d);
         return {
           xy: d3.pointRadial(angle, donutThickness - margins.innerTicks),
           label: months[i],
+          monthId: d.toISOString().slice(0, 7),
         };
       });
 
@@ -322,6 +355,8 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
       dateExtent,
       ticks,
       projectToClient,
+      hoursByMonth,
+      projectsByMonth,
     };
   }, [data]);
 
@@ -373,6 +408,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
                   width={viewBoxWidth * 0.08}
                   y={-100}
                   fontSize={fontSizes.h2}
+                  style={{ opacity: 0.9 }}
                 >
                   {`${hovered}`}
                 </Text>
@@ -398,6 +434,39 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
                   {`${sumByProject.get(hovered)?.toFixed(0)} hours`}
                 </Text>
               </>
+            ) : hoveredMonth ? (
+              <>
+                <Text
+                  key={hovered}
+                  textAnchor="middle"
+                  verticalAnchor="middle"
+                  fill="white"
+                  width={viewBoxWidth * 0.1}
+                  y={-100}
+                  fontSize={fontSizes.h1}
+                  style={{ opacity: 0.9 }}
+                >
+                  {longMonths[Number(hoveredMonth.slice(5, 7)) - 1]}
+                </Text>
+                <Text
+                  textAnchor="middle"
+                  verticalAnchor="middle"
+                  fontSize={fontSizes.h3}
+                  fill="white"
+                  y={0}
+                >
+                  {`${projectsByMonth.get(hoveredMonth)} projects`}
+                </Text>
+                <Text
+                  textAnchor="middle"
+                  verticalAnchor="middle"
+                  fontSize={fontSizes.h3}
+                  fill="white"
+                  y={60}
+                >
+                  {`${hoursByMonth.get(hoveredMonth)?.toFixed(0)} hours`}
+                </Text>
+              </>
             ) : (
               <>
                 <Text
@@ -408,6 +477,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
                   width={viewBoxWidth * 0.1}
                   y={-100}
                   fontSize={fontSizes.h1}
+                  style={{ opacity: 0.9 }}
                 >
                   {dateExtent[0].getFullYear()}
                 </Text>
@@ -464,7 +534,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
 
             {/* Month ticks */}
             <g>
-              {ticks.map(({ xy, label }) => {
+              {ticks.map(({ xy, label, monthId }) => {
                 return (
                   <g className="month-tick">
                     <Text
@@ -473,8 +543,13 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
                       width={100}
                       x={xy[0]}
                       y={xy[1]}
+                      onMouseEnter={() => setHoveredMonth(monthId)}
+                      onMouseLeave={() => setHoveredMonth(null)}
                       fontSize={fontSizes.body2}
                       fill={"white"}
+                      style={{
+                        opacity: hoveredMonth === monthId ? 1 : undefined,
+                      }}
                     >
                       {label}
                     </Text>
