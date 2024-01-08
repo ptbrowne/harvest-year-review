@@ -177,7 +177,6 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
     margins.innerTicks = margins.innerTicks * 1.4;
   }
 
-  const [time, setTime] = useState(0.5);
   const {
     series,
     color,
@@ -193,7 +192,6 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
     hoursByMonth,
   } = useMemo(() => {
     const sortedData = [...data].sort((a, b) => +a.date - +b.date);
-
     const projectToClient = d3.rollup(
       sortedData,
       (v) => v[0].client,
@@ -268,6 +266,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
     ];
 
     // Prepare the scales for positional and color encodings.
+
     const angleOffset = (240 + 10) / 360;
     const angleExtent = (240 - 20) / 360;
     const a = d3
@@ -289,8 +288,9 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
     const donutThickness = donutHeight * 0.5;
     const y = d3
       .scaleLinear()
-      .domain([yExtent[0] / time, yExtent[1] / time])
+      .domain(yExtent)
       .rangeRound([donutHeight - donutThickness, donutHeight]);
+
     const colorScale = makeScaleOrdinal(paletteSpecs);
     const color = colorScale.encode;
 
@@ -358,7 +358,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
       hoursByMonth,
       projectsByMonth,
     };
-  }, [data, time]);
+  }, [data]);
 
   return (
     <>
@@ -368,14 +368,6 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
       <h1 style={{ margin: "1rem", paddingTop: "3rem" }}>
         Your year in review
       </h1>
-      <input
-        type="range"
-        step={0.01}
-        value={time}
-        min={0.01}
-        max={1}
-        onChange={(ev) => setTime(Number(ev.target.value))}
-      />
       <div
         style={{
           gap: "1rem",
