@@ -576,6 +576,8 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
                   }
                   verticalAnchor="end"
                   dominantBaseline="middle"
+                  onMouseEnter={() => setHovered(d.key)}
+                  onMouseLeave={() => setHovered(null)}
                   width={100}
                   x={x}
                   y={y}
