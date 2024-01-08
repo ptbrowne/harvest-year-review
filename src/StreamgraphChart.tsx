@@ -245,6 +245,9 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
           if (a === indexes["Coordination"]) {
             return 1;
           }
+          if (b === indexes["Coordination"]) {
+            return -1;
+          }
           return 0;
         });
         return order;
