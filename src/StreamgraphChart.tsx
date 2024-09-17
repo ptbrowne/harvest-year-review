@@ -7,18 +7,11 @@ import React, {
   useCallback,
 } from "react";
 import * as d3 from "d3";
-import useStore from "./store";
 import { Row } from "./domain";
-import { mkSimplexNoise } from "@spissvinkel/simplex-noise";
 import { color as d3Color } from "d3";
-import clsx from "clsx";
 import { Text } from "@visx/text";
 import dayjs from "dayjs";
 import useMediaQuery from "./useMediaQuery";
-
-type Datum = { project: string; hours: number; date: Date };
-
-const noise = mkSimplexNoise(Math.random);
 
 function roundToMonday(inputDate: Date): Date {
   const date = new Date(inputDate);
@@ -43,7 +36,7 @@ const paletteSpecs = {
 };
 const palette = Object.keys(paletteSpecs);
 
-const getProject = (d: Row) => (d.project === "Team" ? d.task : d.project);
+const getSegment = (d: Row) => (d.project === "Team" ? d.task : d.project);
 
 const GradientDef = ({ color }: { color: string }) => {
   // Generate unique ID for the gradient
@@ -182,43 +175,43 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
     color,
     area,
     label,
-    sumByProject,
+    sumBySegment: sumByProject,
     totalSum,
     dateExtent,
-    totalProjects,
-    projectToClient,
+    totalSegments: totalSegments,
+    segmentToClient: segmentToClient,
     ticks,
-    projectsByMonth,
+    segmentsByMonth,
     hoursByMonth,
   } = useMemo(() => {
     const sortedData = [...data].sort((a, b) => +a.date - +b.date);
-    const projectToClient = d3.rollup(
+    const segmentToClient = d3.rollup(
       sortedData,
       (v) => v[0].client,
       (d) => d.project
     );
-    const sumByDayByProject = d3.rollup(
+    const sumByDayBySegment = d3.rollup(
       sortedData,
       (v) => d3.sum(v.map((x) => x.hours) ?? 0),
       (d) => roundToMonday(d.date),
-      (d) => getProject(d)
+      (d) => getSegment(d)
     );
 
-    const totalProjects = d3.sum(
+    const totalSegments = d3.sum(
       d3
         .rollup(
           sortedData,
           (v) => 1,
-          (d) => getProject(d)
+          (d) => getSegment(d)
         )
         .values()
     );
     const totalSum = d3.sum(sortedData.map((x) => x.hours));
 
-    const sumByProject = d3.rollup(
+    const sumBySegment = d3.rollup(
       sortedData,
       (v) => d3.sum(v.map((x) => x.hours) ?? 0),
-      (d) => getProject(d)
+      (d) => getSegment(d)
     );
 
     const hoursByMonth = d3.rollup(
@@ -227,7 +220,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
       (d) => `${d.date.toISOString().slice(0, 7)}`
     );
 
-    const projectsByMonth = d3.rollup(
+    const segmentsByMonth = d3.rollup(
       sortedData,
       (v) => new Set(v.map((x) => x.project)).size,
       (d) => `${d.date.toISOString().slice(0, 7)}`
@@ -250,10 +243,10 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
         });
         return order;
       })
-      .keys(d3.union(data.map((d) => getProject(d)))) // distinct series keys, in input order
+      .keys(d3.union(data.map((d) => getSegment(d)))) // distinct series keys, in input order
       .value(([, D], key) => D.get(key) ?? 0)(
       // get value for each series key and stack
-      sumByDayByProject
+      sumByDayBySegment
     ); // group by stack then series key
 
     let dateExtent = d3.extent(data, (d) => d.date);
@@ -304,16 +297,16 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
       .outerRadius((d) => y(d[1]));
 
     const maxs: Record<string, Date> = {};
-    let cur: undefined | { project: string; date: Date } = undefined;
-    for (let [date, projects] of Array.from(sumByDayByProject.entries())) {
-      const projectsEntries = Array.from(projects.entries());
-      const maxIndex = d3.maxIndex(projectsEntries.map((x) => x[1]));
-      const maxProject = projectsEntries[maxIndex][0];
+    let cur: undefined | { segment: string; date: Date } = undefined;
+    for (let [date, segments] of Array.from(sumByDayBySegment.entries())) {
+      const segmentsEntries = Array.from(segments.entries());
+      const maxIndex = d3.maxIndex(segmentsEntries.map((x) => x[1]));
+      const maxProject = segmentsEntries[maxIndex][0];
       if (
-        cur?.project !== maxProject &&
+        cur?.segment !== maxProject &&
         (!cur || +date - +cur.date > 1000 * 60 * 60 * 24 * 30)
       ) {
-        cur = { project: maxProject, date };
+        cur = { segment: maxProject, date };
         if (!maxs[maxProject]) {
           maxs[maxProject] = date;
         }
@@ -349,14 +342,14 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
       y,
       series,
       label,
-      sumByProject,
-      totalProjects,
+      sumBySegment,
+      totalSegments,
       totalSum,
       dateExtent,
       ticks,
-      projectToClient,
+      segmentToClient,
       hoursByMonth,
-      projectsByMonth,
+      segmentsByMonth,
     };
   }, [data]);
 
@@ -421,7 +414,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
                   y={0}
                   fontSize={fontSizes.h3}
                 >
-                  {projectToClient.get(hovered)}
+                  {segmentToClient.get(hovered)}
                 </Text>
                 <Text
                   textAnchor="middle"
@@ -455,7 +448,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
                   fill="white"
                   y={0}
                 >
-                  {`${projectsByMonth.get(hoveredMonth)} projects`}
+                  {`${segmentsByMonth.get(hoveredMonth)} projects`}
                 </Text>
                 <Text
                   textAnchor="middle"
@@ -488,7 +481,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
                   fill="white"
                   y={0}
                 >
-                  {`${totalProjects} projects`}
+                  {`${totalSegments} projects`}
                 </Text>
                 <Text
                   textAnchor="middle"
