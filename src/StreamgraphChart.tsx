@@ -36,7 +36,17 @@ const paletteSpecs = {
 };
 const palette = Object.keys(paletteSpecs);
 
-const getSegment = (d: Row) => (d.project === "Team" ? d.task : d.project);
+export type Mode = "auto" | "task" | "project";
+
+const getSegment = (d: Row, mode: Mode) => {
+  if (mode === "project") {
+    return d.project;
+  } else if (mode === "task") {
+    return d.task;
+  } else {
+    return d.project === "Team" ? d.task : d.project;
+  }
+};
 
 const GradientDef = ({ color }: { color: string }) => {
   // Generate unique ID for the gradient
@@ -138,7 +148,13 @@ const longMonths = [
   "December",
 ];
 
-const StreamGraphChart = ({ data }: { data: Row[] }) => {
+const StreamGraphChart = ({
+  data,
+  mode = "task",
+}: {
+  data: Row[];
+  mode: Mode;
+}) => {
   const [hovered, setHovered] = useState<string | null>(null);
   const [hoveredMonth, setHoveredMonth] = useState<string | null>(null);
 
@@ -194,7 +210,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
       sortedData,
       (v) => d3.sum(v.map((x) => x.hours) ?? 0),
       (d) => roundToMonday(d.date),
-      (d) => getSegment(d)
+      (d) => getSegment(d, mode)
     );
 
     const totalSegments = d3.sum(
@@ -202,7 +218,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
         .rollup(
           sortedData,
           (v) => 1,
-          (d) => getSegment(d)
+          (d) => getSegment(d, mode)
         )
         .values()
     );
@@ -211,7 +227,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
     const sumBySegment = d3.rollup(
       sortedData,
       (v) => d3.sum(v.map((x) => x.hours) ?? 0),
-      (d) => getSegment(d)
+      (d) => getSegment(d, mode)
     );
 
     const hoursByMonth = d3.rollup(
@@ -243,7 +259,7 @@ const StreamGraphChart = ({ data }: { data: Row[] }) => {
         });
         return order;
       })
-      .keys(d3.union(data.map((d) => getSegment(d)))) // distinct series keys, in input order
+      .keys(d3.union(data.map((d) => getSegment(d, mode)))) // distinct series keys, in input order
       .value(([, D], key) => D.get(key) ?? 0)(
       // get value for each series key and stack
       sumByDayBySegment
