@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { csvParse } from "d3";
-import { ZodSchema } from "zod";
+import { ZodEffects, ZodSchema, ZodType } from "zod";
 import superjson from "superjson";
 
 const Dropzone = <R,>({
   schema,
   onChange,
 }: {
-  schema: ZodSchema<R>;
+  schema: ZodType<R>;
   onChange: (data: R) => void;
 }) => {
   const [fileError, setFileError] = useState<string | null>(null);
